@@ -164,7 +164,7 @@ export function Home() {
                       "text-2xl font-bold mb-2",
                       analysisResult.ISAI ? "text-red-500" : "text-green-500"
                     )}>
-                      {analysisResult.ISAI ? "AI Generated" : "Human Voice"}
+                      {analysisResult.ISAI ? "AI Generated" : "Human Created"}
                     </h2>
                     <div className="relative mb-4">
                       <div className="text-4xl font-bold text-primary">

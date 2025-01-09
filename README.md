@@ -2,10 +2,12 @@
 
 A sophisticated web application that analyzes audio files to determine if they are AI-generated or human-created. The application provides comprehensive insights through IRCAM Amplify API integration and intelligent data processing, featuring an interactive waveform visualization.
 
+
+
+
 ## Features
 
 - 🎵 Audio file upload and analysis
-- 📊 Waveform visualization using Wavesurfer.js
 - 🤖 AI detection through IRCAM Amplify API
 - 📈 Confidence score display
 - 🔄 Track upload limit (5 tracks per session in production)
@@ -74,7 +76,7 @@ The application will be running with hot-reload enabled for both frontend and ba
    - Maximum file size: 10MB
 
 2. **View Analysis Results**
-   - AI detection result (AI Generated / Human Voice)
+   - AI detection result (AI Generated / Human Created)
    - Confidence score
    - Interactive waveform visualization
    - Remaining upload count (in production)
@@ -121,7 +123,7 @@ Response:
 - PostgreSQL with Drizzle ORM
 - Tailwind CSS + shadcn/ui
 - Wavesurfer.js for audio visualization
-- IRCAM Amplify API for audio analysis
+- IRCAM Amplify API for AI Detection
 
 ## Development Guidelines
 
@@ -136,6 +138,7 @@ Response:
 3. API Integration
    - All IRCAM API calls are handled on the backend
    - Proper error handling and rate limiting are implemented
+
 
 ## Production Deployment
 
