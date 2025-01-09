@@ -3,11 +3,7 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import multer from "multer";
-import { db } from "@db";
-import { uploads } from "@db/schema";
 import axios from "axios";
-import { eq, count } from "drizzle-orm";
-
 const MemoryStoreSession = MemoryStore(session);
 
 function logStep(step: string, data?: any) {
@@ -16,9 +12,6 @@ function logStep(step: string, data?: any) {
     console.log(JSON.stringify(data, null, 2));
   }
 }
-
-// Maximum uploads per session in production
-const MAX_UPLOADS_PER_SESSION = 5;
 
 export function registerRoutes(app: Express): Server {
   // Session middleware
@@ -51,32 +44,8 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Check if user has already uploaded
-  app.get("/api/check-upload", async (req, res) => {
-    try {
-      const sessionId = req.session.id;
-      logStep("Checking upload status", { sessionId });
-
-      // Count user's uploads
-      const uploadCount = await db.select({
-        value: count()
-      }).from(uploads)
-        .where(eq(uploads.sessionId, sessionId))
-        .execute()
-        .then(result => result[0]?.value ?? 0);
-
-      // In development, unlimited uploads
-      const uploadsRemaining = process.env.NODE_ENV === 'production'
-        ? Math.max(0, MAX_UPLOADS_PER_SESSION - uploadCount)
-        : null;
-
-      const hasUploaded = process.env.NODE_ENV === 'production' && uploadCount >= MAX_UPLOADS_PER_SESSION;
-
-      logStep("Upload status result", { hasUploaded, uploadsRemaining });
-      res.json({ hasUploaded, uploadsRemaining });
-    } catch (error) {
-      console.error('Check upload error:', error);
-      res.status(500).json({ error: 'Failed to check upload status' });
-    }
+  app.get("/api/check-upload", async (_req, res) => {
+    res.json({ hasUploaded: false });
   });
 
   // Handle file upload and IRCAM API integration
@@ -87,28 +56,10 @@ export function registerRoutes(app: Express): Server {
         throw new Error("No file uploaded");
       }
 
-      const sessionId = req.session.id;
-      const ipAddress = req.ip;
-
-      // In production, check upload limit
-      if (process.env.NODE_ENV === 'production') {
-        const uploadCount = await db.select({
-          value: count()
-        }).from(uploads)
-          .where(eq(uploads.sessionId, sessionId))
-          .execute()
-          .then(result => result[0]?.value ?? 0);
-
-        if (uploadCount >= MAX_UPLOADS_PER_SESSION) {
-          throw new Error(`Upload limit reached (${MAX_UPLOADS_PER_SESSION} files per session)`);
-        }
-      }
-
       logStep("Starting file upload", {
         fileName: req.file.originalname,
         fileSize: req.file.size,
-        mimeType: req.file.mimetype,
-        sessionId
+        mimeType: req.file.mimetype
       });
 
       // Get auth token
@@ -197,35 +148,9 @@ export function registerRoutes(app: Express): Server {
         }
       }
 
-      // Save to database
-      logStep("Saving to database");
-      await db.insert(uploads).values([{
-        sessionId,
-        ipAddress,
-        fileName: req.file.originalname,
-        fileId,
-        isAi: result.isAi,
-        confidenceScore: String(result.confidence),
-        createdAt: new Date()
-      }]);
-      logStep("Database entry created");
-
-      // Get updated upload count
-      const newUploadCount = await db.select({
-        value: count()
-      }).from(uploads)
-        .where(eq(uploads.sessionId, sessionId))
-        .execute()
-        .then(result => result[0]?.value ?? 0);
-
-      const uploadsRemaining = process.env.NODE_ENV === 'production'
-        ? Math.max(0, MAX_UPLOADS_PER_SESSION - newUploadCount)
-        : null;
-
       res.json({
         ISAI: result.isAi,
-        confidence: result.confidence,
-        uploadsRemaining
+        confidence: result.confidence
       });
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
