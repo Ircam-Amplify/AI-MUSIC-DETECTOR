@@ -16,7 +16,7 @@ Before running the application, ensure you have the following installed:
 
 - Node.js (v18 or later)
 - IRCAM Amplify API credentials
-  - You'll need to obtain `IRCAM_CLIENT_ID` and `IRCAM_CLIENT_SECRET` from [IRCAM Amplify](https://app.ircamamplify.io/api-credentials)
+  - You'll need to obtain `IRCAM_AMPLIFY_CLIENT_ID` and `IRCAM_AMPLIFY_CLIENT_SECRET` from [IRCAM Amplify](https://app.ircamamplify.io/api-credentials)
 
 ## Installation
 

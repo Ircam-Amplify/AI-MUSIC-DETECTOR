@@ -65,8 +65,8 @@ export function registerRoutes(app: Express): Server {
       // Get auth token
       logStep("Getting IRCAM auth token");
       const authResponse = await axios.post("https://api.ircamamplify.io/oauth/token", {
-        client_id: process.env.IRCAM_CLIENT_ID,
-        client_secret: process.env.IRCAM_CLIENT_SECRET,
+        client_id: process.env.IRCAM_AMPLIFY_CLIENT_ID,
+        client_secret: process.env.IRCAM_AMPLIFY_CLIENT_SECRET,
         grant_type: "client_credentials"
       });
 
