@@ -144,7 +144,7 @@ export function Home() {
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardContent className="p-6">
-            <h1 className="text-2xl font-bold mb-6">IRCAM Amplify AI MUSIC detection</h1>
+            <h1 className="text-2xl font-bold mb-6">Audio Analysis</h1>
 
             {analysisResult ? (
               <div className="text-center p-6">
@@ -164,7 +164,7 @@ export function Home() {
                       "text-2xl font-bold mb-2",
                       analysisResult.ISAI ? "text-red-500" : "text-green-500"
                     )}>
-                      {analysisResult.ISAI ? "AI Generated" : "Human Created"}
+                      {analysisResult.ISAI ? "AI Generated" : "Human Voice"}
                     </h2>
                     <div className="relative mb-4">
                       <div className="text-4xl font-bold text-primary">

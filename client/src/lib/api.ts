@@ -2,13 +2,11 @@ import axios from "axios";
 
 export type UploadStatusResponse = {
   hasUploaded: boolean;
-  uploadsRemaining: number | null;
 };
 
 export type AnalysisResponse = {
   ISAI: boolean;
   confidence: number;
-  uploadsRemaining: number | null;
 };
 
 export async function checkUploadStatus(): Promise<UploadStatusResponse> {
