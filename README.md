@@ -63,7 +63,7 @@ The application will be running with hot-reload enabled for both frontend and ba
    - Maximum file size: 10MB
 
 2. **View Analysis Results**
-   - AI detection result (AI Generated / Human Voice)
+   - AI detection result (AI Generated / Human Created)
    - Confidence score percentage
 
 ## API Endpoints
