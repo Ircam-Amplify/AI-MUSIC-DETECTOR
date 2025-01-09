@@ -105,10 +105,10 @@ Response:
 ## Development Guidelines
 
 1. Environment Variables
-   - Make sure to set up IRCAM API credentials in your environment
+   - Make sure to set up IRCAM AMPLIFY API credentials in your environment
 
 2. API Integration
-   - All IRCAM API calls are handled on the backend
+   - All IRCAM AMPLIFY API calls are handled on the backend
    - Proper error handling is implemented
 
 ## Production Deployment
