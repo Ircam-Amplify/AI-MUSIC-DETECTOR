@@ -1,8 +1,7 @@
 ![Demo Gif](client/src/assets/DEMO.gif)
-
 # AI MUSIC Detector from IRCAMAMPLIFY.IO
-
 A simple web application that analyzes audio files to determine if they are AI-generated or human-created. The application provides comprehensive insights through IRCAM Amplify API integration and intelligent data processing.
+
 
 # Local Development Setup Guide
 
