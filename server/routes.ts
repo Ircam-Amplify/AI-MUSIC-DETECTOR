@@ -1,20 +1,45 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
+import { createServer } from "http";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import multer from "multer";
 import axios from "axios";
-const MemoryStoreSession = MemoryStore(session);
 
+// Types
+interface AnalysisResult {
+  isAi: boolean;
+  confidence: number;
+}
+
+interface IRCAMResponse {
+  job_infos: {
+    job_status: string;
+    report_info?: {
+      report: {
+        resultList: AnalysisResult[];
+      };
+    };
+  };
+}
+
+// Constants
+const MemoryStoreSession = MemoryStore(session);
+const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg'];
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+const POLLING_INTERVAL = 5000; // 5 seconds
+
+// Utility functions
 function logStep(step: string, data?: any) {
-  console.log(`[${new Date().toISOString()}] ${step}`);
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${step}`);
   if (data) {
     console.log(JSON.stringify(data, null, 2));
   }
 }
 
 export function registerRoutes(app: Express): Server {
-  // Session middleware
+  // Session configuration
   app.use(
     session({
       secret: "audio-analysis-secret",
@@ -27,15 +52,12 @@ export function registerRoutes(app: Express): Server {
     })
   );
 
-  // File upload configuration
+  // Multer configuration
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: {
-      fileSize: 10 * 1024 * 1024 // 10MB limit
-    },
+    limits: { fileSize: MAX_FILE_SIZE },
     fileFilter: (_req, file, cb) => {
-      const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg'];
-      if (allowedTypes.includes(file.mimetype)) {
+      if (ALLOWED_AUDIO_TYPES.includes(file.mimetype)) {
         cb(null, true);
       } else {
         cb(new Error('Invalid file type. Only audio files are allowed.'));
@@ -43,115 +65,44 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Check if user has already uploaded
-  app.get("/api/check-upload", async (_req, res) => {
+  // Routes
+  app.get("/api/check-upload", (_req, res) => {
     res.json({ hasUploaded: false });
   });
 
-  // Handle file upload and IRCAM API integration
   app.post("/api/upload", upload.single("audio"), async (req, res) => {
     const startTime = Date.now();
+
     try {
       if (!req.file) {
         throw new Error("No file uploaded");
       }
 
+      // Log file details
       logStep("Starting file upload", {
         fileName: req.file.originalname,
         fileSize: req.file.size,
         mimeType: req.file.mimetype
       });
 
-      // Get auth token
-      logStep("Getting IRCAM auth token");
-      const authResponse = await axios.post("https://api.ircamamplify.io/oauth/token", {
-        client_id: process.env.IRCAM_AMPLIFY_CLIENT_ID,
-        client_secret: process.env.IRCAM_AMPLIFY_CLIENT_SECRET,
-        grant_type: "client_credentials"
-      });
+      // Authentication
+      const { id_token } = await getAuthToken();
+      const headers = createHeaders(id_token, "application/json");
 
-      const idToken = authResponse.data.id_token;
-      logStep("Received auth token");
+      // File handling
+      const fileId = await createStorageLocation(headers);
+      await uploadFileToStorage(req.file, fileId, headers);
+      const iasUrl = await getIasUrl(fileId, headers);
 
-      const headers = {
-        Authorization: `Bearer ${idToken}`,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      };
-
-      // Create storage location
-      logStep("Creating storage location");
-      const storageResponse = await axios.post(
-        "https://storage.ircamamplify.io/manager/",
-        {},
-        { headers }
-      );
-      const fileId = storageResponse.data.id;
-      logStep("Storage location created", { fileId });
-
-      // Upload file
-      const uploadHeaders = {
-        ...headers,
-        "Content-Type": req.file.mimetype
-      };
-
-      logStep("Uploading file to storage");
-      await axios.put(
-        `https://storage.ircamamplify.io/${fileId}/${req.file.originalname}`,
-        req.file.buffer,
-        { headers: uploadHeaders }
-      );
-      logStep("File uploaded successfully");
-
-      // Get IAS URL
-      logStep("Getting IAS URL");
-      const iasResponse = await axios.get(
-        `https://storage.ircamamplify.io/manager/${fileId}`,
-        { headers }
-      );
-      const iasUrl = iasResponse.data.ias;
-      logStep("Received IAS URL", { iasUrl });
-
-      // Process with AI detector
-      logStep("Starting AI detection");
-      const processResponse = await axios.post(
-        "https://api.ircamamplify.io/aidetector/",
-        { audioUrlList: [iasUrl] },
-        { headers }
-      );
-      const jobId = processResponse.data.id;
-      logStep("AI detection job created", { jobId });
-
-      // Poll for results
-      let result;
-      let attempts = 0;
-      while (true) {
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        logStep(`Checking job status (attempt ${attempts})`);
-        const statusResponse = await axios.get(
-          `https://api.ircamamplify.io/aidetector/${jobId}`,
-          { headers }
-        );
-
-        const status = statusResponse.data.job_infos.job_status;
-        logStep("Job status", { status, attempt: attempts });
-
-        if (status === "success") {
-          const report = statusResponse.data.job_infos.report_info.report;
-          result = report.resultList[0]; // Get the first result since we only upload one file
-          logStep("Analysis complete", result);
-          break;
-        } else if (status === "error") {
-          throw new Error("Processing failed");
-        }
-      }
+      // Analysis
+      const jobId = await startAIDetection(iasUrl, headers);
+      const result = await pollForResults(jobId, headers);
 
       res.json({
         ISAI: result.isAi,
         confidence: result.confidence
       });
+
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
       console.error('Upload error:', {
@@ -166,6 +117,111 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  return createServer(app);
+}
+
+// Helper functions for API calls
+async function getAuthToken() {
+  logStep("Getting IRCAM auth token");
+
+  const payload = {
+    client_id: process.env.IRCAM_CLIENT_ID,
+    client_secret: process.env.IRCAM_CLIENT_SECRET,
+    grant_type: "client_credentials",
+    scope: "api" // Adding required scope parameter
+  };
+
+  try {
+    const response = await axios.post("https://api.ircamamplify.io/oauth/token", payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.data.id_token) {
+      throw new Error('No id_token received in response');
+    }
+
+    logStep("Auth token received", { tokenReceived: true });
+    return response.data;
+  } catch (error: any) {
+    console.error('Auth token error:', {
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    throw new Error(`Authentication failed: ${error.response?.data?.message || error.message}`);
+  }
+}
+
+function createHeaders(token: string, contentType: string) {
+  return {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": contentType,
+    Accept: "application/json"
+  };
+}
+
+async function createStorageLocation(headers: any) {
+  logStep("Creating storage location");
+  const response = await axios.post(
+    "https://storage.ircamamplify.io/manager/",
+    {},
+    { headers }
+  );
+  return response.data.id;
+}
+
+async function uploadFileToStorage(file: Express.Multer.File, fileId: string, headers: any) {
+  logStep("Uploading file to storage");
+  const uploadHeaders = { ...headers, "Content-Type": file.mimetype };
+  await axios.put(
+    `https://storage.ircamamplify.io/${fileId}/${file.originalname}`,
+    file.buffer,
+    { headers: uploadHeaders }
+  );
+}
+
+async function getIasUrl(fileId: string, headers: any) {
+  logStep("Getting IAS URL");
+  const response = await axios.get(
+    `https://storage.ircamamplify.io/manager/${fileId}`,
+    { headers }
+  );
+  return response.data.ias;
+}
+
+async function startAIDetection(iasUrl: string, headers: any) {
+  logStep("Starting AI detection");
+  const response = await axios.post(
+    "https://api.ircamamplify.io/aidetector/",
+    { audioUrlList: [iasUrl] },
+    { headers }
+  );
+  return response.data.id;
+}
+
+async function pollForResults(jobId: string, headers: any): Promise<AnalysisResult> {
+  let attempts = 0;
+  while (true) {
+    attempts++;
+    await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL));
+
+    logStep(`Checking job status (attempt ${attempts})`);
+    const response = await axios.get<IRCAMResponse>(
+      `https://api.ircamamplify.io/aidetector/${jobId}`,
+      { headers }
+    );
+
+    const status = response.data.job_infos.job_status;
+    if (status === "success") {
+      const result = response.data.job_infos.report_info!.report.resultList[0];
+      logStep("Analysis complete", result);
+      return result;
+    }
+
+    if (status === "error") {
+      throw new Error("Processing failed");
+    }
+  }
 }
