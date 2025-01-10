@@ -164,7 +164,7 @@ export function Home() {
                       "text-2xl font-bold mb-2",
                       analysisResult.ISAI ? "text-red-500" : "text-green-500"
                     )}>
-                      {analysisResult.ISAI ? "AI Generated" : "Human Voice"}
+                      {analysisResult.ISAI ? "AI Generated" : "Human Created"}
                     </h2>
                     <div className="relative mb-4">
                       <div className="text-4xl font-bold text-primary">
@@ -175,11 +175,6 @@ export function Home() {
                     {currentFile && (
                       <p className="text-sm text-gray-600 mb-4">
                         File: {currentFile.name}
-                      </p>
-                    )}
-                    {analysisResult.uploadsRemaining !== null && (
-                      <p className="text-sm text-gray-600">
-                        Uploads remaining: {analysisResult.uploadsRemaining}
                       </p>
                     )}
                   </div>
@@ -227,11 +222,6 @@ export function Home() {
                         ? "Drop the audio file here"
                         : "Drag and drop an audio file, or click to select"}
                     </p>
-                    {typeof uploadStatus?.uploadsRemaining === 'number' && (
-                      <p className="text-sm text-gray-500 mt-2">
-                        {uploadStatus.uploadsRemaining} uploads remaining
-                      </p>
-                    )}
                   </>
                 )}
               </div>
