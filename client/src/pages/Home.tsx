@@ -29,9 +29,14 @@ export function Home() {
         container: waveformRef.current,
         waveColor: '#4f46e5',
         progressColor: '#312e81',
-        cursorWidth: 0,
+        cursorWidth: 1,
         height: 80,
         normalize: true,
+        splitChannels: false,
+        fillParent: true,
+        mediaControls: true,
+        autoplay: false,
+        interact: true,
       });
 
       const fileUrl = URL.createObjectURL(currentFile);
@@ -206,13 +211,6 @@ export function Home() {
                     <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
                     <p className="text-sm text-gray-600 mb-4">Processing your audio file...</p>
                     <Progress value={progress} className="h-2 w-full max-w-xs" />
-                  </div>
-                ) : uploadStatus?.hasUploaded ? (
-                  <div className="text-center">
-                    <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <p className="text-sm text-gray-600">
-                      You have reached the maximum number of uploads allowed
-                    </p>
                   </div>
                 ) : (
                   <>
