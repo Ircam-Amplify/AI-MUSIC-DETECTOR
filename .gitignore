@@ -1,6 +1,60 @@
+# Dependencies
 node_modules
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build outputs
 dist
-.DS_Store
+build
 server/public
+*.tsbuildinfo
+.next
+out
+
+# Debug & Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IDE - JetBrains
+.idea
+*.iml
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Replit specific
+.config
+.upm
+.replit
+replit.nix
+.breakpoints
+
+# TypeScript
+*.tsbuildinfo
 vite.config.ts.*
+
+# Database
+*.sqlite
+*.db
+
+# Misc
+*.pem
+.vercel
+.env*.local
 *.tar.gz
